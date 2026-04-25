@@ -1,0 +1,749 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Receipt Generator — MESCO PETROLEUM</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="stylesheet" href="colors_and_type.css" />
+<style>
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: #1f1d1a;
+    color: #fff;
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    padding: 32px 24px 64px;
+  }
+  .wrap {
+    max-width: 1100px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 36px;
+    align-items: start;
+  }
+  h1 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    margin: 0 0 4px;
+    font-size: 22px;
+    grid-column: 1 / -1;
+  }
+  .sub {
+    grid-column: 1 / -1;
+    margin: 0 0 14px;
+    color: rgba(255,255,255,0.55);
+    font-size: 13px;
+  }
+
+  /* ── Form ── */
+  .form {
+    background: linear-gradient(180deg, #2b2826, #1a1816);
+    border: 1px solid #0c0a08;
+    border-radius: 4px;
+    padding: 18px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 12px 28px rgba(0,0,0,0.4);
+  }
+  .form h2 {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    margin: 0 0 14px;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field--full { grid-column: span 2; }
+  .field span {
+    font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+  }
+  .field input {
+    background: #0d0c0b;
+    border: 1px solid #000;
+    color: #f3dd15;
+    font-family: var(--font-mono); font-size: 14px;
+    padding: 9px 10px;
+    border-radius: 2px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+    outline: none;
+  }
+  .field input:focus { border-color: var(--spot-yellow); }
+  .row {
+    display: flex; gap: 10px; margin-top: 14px;
+  }
+  .btn {
+    flex: 1;
+    background: linear-gradient(180deg, var(--spot-red), #c8201f);
+    color: #fff; border: none;
+    padding: 12px;
+    font-family: var(--font-sans); font-weight: 700;
+    letter-spacing: 0.16em;
+    cursor: pointer;
+    border-radius: 2px;
+    box-shadow: 0 4px 0 #7a1414;
+  }
+  .btn:hover { filter: brightness(1.05); }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #7a1414; }
+  .btn--ghost {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.18);
+    box-shadow: none;
+    color: #d6d2c8;
+  }
+  .btn--ghost:active { transform: none; }
+  .btn--green {
+    background: linear-gradient(180deg, #27a843, #1e8836);
+    box-shadow: 0 4px 0 #135c24;
+  }
+  .btn--green:active { box-shadow: 0 2px 0 #135c24; }
+  .btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: none;
+    transform: none;
+  }
+
+  .total {
+    margin-top: 14px;
+    padding: 12px;
+    background: #0d0c0b;
+    border: 1px dashed rgba(255,255,255,0.15);
+    border-radius: 2px;
+    display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .total .lbl { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(255,255,255,0.55); }
+  .total .val { font-family: var(--font-mono); font-size: 22px; color: #5BD66B; font-weight: 700; }
+
+  .hint {
+    margin-top: 12px;
+    font-family: var(--font-mono); font-size: 10px;
+    color: rgba(255,255,255,0.35);
+    letter-spacing: 0.04em;
+    line-height: 1.5;
+  }
+
+  /* ── Stage ── */
+  .stage {
+    background: #efe8d8;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+      radial-gradient(rgba(0,0,0,0.03) 1px, transparent 1px);
+    background-size: 4px 4px, 7px 7px;
+    background-position: 0 0, 2px 3px;
+    min-height: 940px;
+    padding: 40px 0;
+    display: flex; justify-content: center; align-items: flex-start;
+    border-radius: 4px;
+    box-shadow: inset 0 0 80px rgba(0,0,0,0.18);
+  }
+
+  /* ── Receipt ── */
+  .receipt {
+    width: 310px;
+    background: #fff;
+    box-shadow:
+      0 12px 32px rgba(0,0,0,0.28),
+      0 2px 4px rgba(0,0,0,0.12);
+    padding: 11px 0 28px;
+    color: #000;
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 6px, #000 calc(100% - 6px), transparent 100%);
+            mask-image: linear-gradient(to bottom, transparent 0, #000 6px, #000 calc(100% - 6px), transparent 100%);
+    position: relative;
+  }
+  .receipt::before, .receipt::after {
+    content: "";
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      radial-gradient(rgba(0,0,0,0.03) 1px, transparent 1px);
+    background-size: 3px 3px;
+    mix-blend-mode: multiply;
+  }
+  .thank {
+    font-family: var(--font-mono);
+    font-size: 14px; line-height: 1;
+    padding: 0 27px;
+    margin-bottom: 24px;
+  }
+  .logo {
+    display: flex; justify-content: center;
+    margin: 18px 0 0;
+  }
+  .logo img {
+    width: 95px; height: 118px; object-fit: contain;
+    image-rendering: -webkit-optimize-contrast;
+  }
+  .welcome {
+    font-family: var(--font-mono);
+    font-size: 24px; line-height: 1;
+    text-align: center;
+    margin: 6px 0 14px;
+  }
+  .station {
+    font-family: var(--font-sans);
+    font-size: 15px; line-height: 1.1;
+    padding: 0 27px;
+    margin-bottom: 18px;
+    white-space: pre-line;
+  }
+  .data {
+    font-family: var(--font-mono);
+    font-size: 14px; line-height: 1.25;
+    padding: 0 27px;
+    white-space: pre;
+    margin: 0;
+  }
+
+  /* ── Bulk Section ── */
+  .bulk-wrap {
+    max-width: 1100px;
+    margin: 40px auto 0;
+  }
+  .bulk-panel {
+    background: linear-gradient(180deg, #2b2826, #1a1816);
+    border: 1px solid #0c0a08;
+    border-radius: 4px;
+    padding: 22px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 12px 28px rgba(0,0,0,0.4);
+  }
+  .bulk-panel h2 {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.55);
+    margin: 0 0 16px;
+  }
+  .upload-area {
+    border: 2px dashed rgba(255,255,255,0.15);
+    border-radius: 4px;
+    padding: 32px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+    position: relative;
+  }
+  .upload-area:hover, .upload-area.drag-over {
+    border-color: var(--spot-yellow);
+    background: rgba(243,221,21,0.04);
+  }
+  .upload-area input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon {
+    font-size: 28px; margin-bottom: 10px;
+  }
+  .upload-label {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: rgba(255,255,255,0.55);
+    letter-spacing: 0.08em;
+  }
+  .upload-label strong {
+    color: #f3dd15;
+  }
+  .upload-hint {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: rgba(255,255,255,0.3);
+    margin-top: 6px;
+  }
+
+  .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 22px;
+    margin-bottom: 10px;
+  }
+  .preview-header span {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.5);
+  }
+  .preview-table-wrap {
+    overflow-x: auto;
+    border-radius: 3px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .preview-table th {
+    background: #0d0c0b;
+    color: rgba(255,255,255,0.5);
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .preview-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    color: #d6d2c8;
+  }
+  .preview-table tr:last-child td { border-bottom: none; }
+  .preview-table tr:hover td { background: rgba(255,255,255,0.03); }
+  .preview-table .rno-cell { color: #f3dd15; }
+  .preview-table .time-cell { color: rgba(255,255,255,0.6); }
+
+  .bulk-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    align-items: center;
+  }
+  .progress-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    display: none;
+  }
+  .progress-bar {
+    height: 100%;
+    background: #5BD66B;
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.1s;
+  }
+  .progress-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: rgba(255,255,255,0.45);
+    display: none;
+  }
+
+  /* ── Offscreen render area ── */
+  #offscreen-stage {
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    background: #efe8d8;
+    padding: 40px;
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .form, h1, .sub, .bulk-wrap { display: none !important; }
+    .wrap { display: block; }
+    .stage { background: #fff; box-shadow: none; min-height: auto; padding: 0; }
+    .receipt { box-shadow: none; -webkit-mask-image: none; mask-image: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Receipt Generator</h1>
+  <p class="sub">MESCO PETROLEUM · Charkop Link Rd, Kandivali · enter values, the receipt updates live.</p>
+
+  <form class="form" id="f" onsubmit="event.preventDefault()">
+    <h2>Single Receipt</h2>
+    <div class="grid">
+      <label class="field">
+        <span>Date (DD/MM/YY)</span>
+        <input id="date" value="01/04/26" />
+      </label>
+      <label class="field">
+        <span>Time (HH:MM)</span>
+        <input id="time" value="09:28" />
+      </label>
+      <label class="field">
+        <span>Rate (₹ / L)</span>
+        <input id="rate" value="103.56" inputmode="decimal" />
+      </label>
+      <label class="field">
+        <span>Volume (Litres)</span>
+        <input id="litres" value="30" inputmode="decimal" />
+      </label>
+
+      <label class="field field--full">
+        <span>Vehicle No.</span>
+        <input id="vehicle" value="MH 02 DZ 2436" />
+      </label>
+      <label class="field">
+        <span>Receipt No.</span>
+        <input id="rno" value="P8096" />
+      </label>
+      <label class="field">
+        <span>Local ID</span>
+        <input id="lid" value="00324966" />
+      </label>
+    </div>
+
+    <div class="total">
+      <span class="lbl">Amount</span>
+      <span class="val" id="totalDisp">₹ 03106.80</span>
+    </div>
+
+    <div class="row">
+      <button class="btn" type="button" onclick="window.print()">PRINT / PDF</button>
+      <button class="btn btn--ghost" type="button" onclick="downloadPNG()">PNG</button>
+    </div>
+
+    <p class="hint">Spaces in the printed lines are alignment characters — preserved exactly as the original Figma source. Volume is padded to <code style="color:#f3dd15">00030.00</code>; amount to <code style="color:#f3dd15">03106.80</code>.</p>
+  </form>
+
+  <div class="stage">
+    <article class="receipt" id="receipt">
+      <div class="thank">Thank You! Please Visit Again..</div>
+      <div class="logo"><img src="assets/hp-logo.jpg" alt="HP" id="logoImg" crossorigin="anonymous"/></div>
+      <div class="welcome">Welcomes You</div>
+      <div class="station">MESCO PETROLEUM
+CHARKOP LINK RD KANDIWALI</div>
+      <pre class="data" id="data"></pre>
+    </article>
+  </div>
+</div>
+
+<!-- ── Bulk Upload Section ── -->
+<div class="bulk-wrap">
+  <div class="bulk-panel">
+    <h2>Bulk Upload &amp; Download</h2>
+
+    <div class="upload-area" id="uploadArea">
+      <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" />
+      <div class="upload-icon">📂</div>
+      <div class="upload-label">Drop your <strong>CSV or Excel</strong> file here, or click to browse</div>
+      <div class="upload-hint">Columns expected: Date · Ltr · Amount &nbsp;(time is randomised 7 am – 9 pm)</div>
+    </div>
+
+    <div id="previewSection" style="display:none">
+      <div class="preview-header">
+        <span id="previewCount">0 rows loaded</span>
+        <button class="btn btn--ghost" style="flex:none;padding:7px 14px;font-size:12px" onclick="clearUpload()">Clear</button>
+      </div>
+      <div class="preview-table-wrap">
+        <table class="preview-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Date</th>
+              <th>Time</th>
+              <th>Ltr</th>
+              <th>Amount (₹)</th>
+              <th>Receipt No.</th>
+            </tr>
+          </thead>
+          <tbody id="previewBody"></tbody>
+        </table>
+      </div>
+      <div class="bulk-actions">
+        <button class="btn btn--green" id="bulkBtn" style="flex:none;padding:12px 24px" onclick="bulkDownload()">
+          ⬇ Download All as ZIP
+        </button>
+        <div class="progress-bar-wrap" id="progressWrap">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <span class="progress-label" id="progressLabel"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Offscreen receipt for bulk rendering -->
+<div id="offscreen-stage">
+  <article class="receipt" id="receipt-bulk">
+    <div class="thank">Thank You! Please Visit Again..</div>
+    <div class="logo"><img src="assets/hp-logo.jpg" alt="HP" id="logoImgBulk" crossorigin="anonymous"/></div>
+    <div class="welcome">Welcomes You</div>
+    <div class="station">MESCO PETROLEUM
+CHARKOP LINK RD KANDIWALI</div>
+    <pre class="data" id="data-bulk"></pre>
+  </article>
+</div>
+
+<script>
+  // ── Single receipt ──
+  const $ = (id) => document.getElementById(id);
+  const ids = ["date","time","rate","litres","vehicle","rno","lid"];
+
+  function pad(num, intDigits, fracDigits = 2) {
+    const n = Number(num);
+    if (!isFinite(n)) return "0".repeat(intDigits) + "." + "0".repeat(fracDigits);
+    const fixed = n.toFixed(fracDigits);
+    const [intPart, fracPart] = fixed.split(".");
+    return intPart.padStart(intDigits, "0") + "." + fracPart;
+  }
+
+  function buildLines(date, time, rate, litres, vehicle, rno, lid) {
+    const amount  = rate * litres;
+    const volStr  = pad(litres, 5, 2);
+    const amtStr  = pad(amount, 5, 2);
+    const rateStr = Number(rate).toFixed(2);
+    return [
+      `Tel. No. : 0222869597`,
+      ``,
+      `Receipt No . :  ${rno}`,
+      `Local ID :   ${lid}`,
+      `FIP No .     : 02`,
+      `Nozzle No .  : 02`,
+      `Product      : Petrol`,
+      `Density   : 745 . 0Kg/Cu . mtr`,
+      ``,
+      `Preset Type  :  Non Preset`,
+      `Rate         :    ${rateStr}`,
+      `Volume       :  ${volStr}`,
+      `Amount      :   ${amtStr}`,
+      ``,
+      `Vehicle No. :  ${vehicle}`,
+      `Mobile No.  :  Not Entrd `,
+      ``,
+      `Date :  ${date} Time: ${time}`,
+      ``,
+      `CST No :`,
+      `LST No :`,
+      `VAT No :`,
+    ].join("\n");
+  }
+
+  function render() {
+    const date    = $("date").value.trim();
+    const time    = $("time").value.trim();
+    const rate    = Number($("rate").value) || 0;
+    const litres  = Number($("litres").value) || 0;
+    const vehicle = $("vehicle").value.trim().toUpperCase();
+    const rno     = $("rno").value.trim();
+    const lid     = $("lid").value.trim();
+
+    const amount = rate * litres;
+    $("totalDisp").textContent = "₹ " + pad(amount, 5, 2);
+    $("data").textContent = buildLines(date, time, rate, litres, vehicle, rno, lid);
+  }
+
+  ids.forEach(id => $(id).addEventListener("input", render));
+  render();
+
+  async function downloadPNG() {
+    await ensureHtmlToImage();
+    const node = $("receipt");
+    const dataUrl = await window.htmlToImage.toPng(node, { pixelRatio: 2, backgroundColor: "#ffffff" });
+    const a = document.createElement("a");
+    a.href = dataUrl;
+    a.download = `receipt-${$("rno").value || "out"}.png`;
+    a.click();
+  }
+
+  async function ensureHtmlToImage() {
+    if (window.htmlToImage) return;
+    await new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureJSZip() {
+    if (window.JSZip) return;
+    await new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  async function ensureXLSX() {
+    if (window.XLSX) return;
+    await new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  // ── Bulk helpers ──
+
+  function randomReceiptNo() {
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const l1 = letters[Math.floor(Math.random() * 26)];
+    const l2 = letters[Math.floor(Math.random() * 26)];
+    const digits = String(Math.floor(Math.random() * 90000) + 10000);
+    return l1 + l2 + digits;
+  }
+
+  function randomTime() {
+    // 07:00 to 20:59
+    const h = Math.floor(Math.random() * 14) + 7;   // 7..20
+    const m = Math.floor(Math.random() * 60);
+    return `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+  }
+
+  function parseDate(raw) {
+    // Accepts: DD-MM-YYYY, DD/MM/YYYY, DD-MM-YY, Excel serial number
+    if (typeof raw === "number") {
+      // Excel serial date
+      const d = new Date(Math.round((raw - 25569) * 86400 * 1000));
+      const dd = String(d.getUTCDate()).padStart(2,"0");
+      const mm = String(d.getUTCMonth() + 1).padStart(2,"0");
+      const yy = String(d.getUTCFullYear()).slice(-2);
+      return `${dd}/${mm}/${yy}`;
+    }
+    const s = String(raw).trim();
+    const parts = s.split(/[-\/]/);
+    if (parts.length === 3) {
+      const dd = parts[0].padStart(2,"0");
+      const mm = parts[1].padStart(2,"0");
+      const yy = parts[2].length === 4 ? parts[2].slice(-2) : parts[2].padStart(2,"0");
+      return `${dd}/${mm}/${yy}`;
+    }
+    return s;
+  }
+
+  function formatAmount(n) {
+    return Number(n).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  let bulkRows = [];
+
+  function clearUpload() {
+    bulkRows = [];
+    $("previewSection").style.display = "none";
+    $("fileInput").value = "";
+    $("uploadArea").style.display = "";
+  }
+
+  // Drag & drop
+  const uploadArea = $("uploadArea");
+  uploadArea.addEventListener("dragover", e => { e.preventDefault(); uploadArea.classList.add("drag-over"); });
+  uploadArea.addEventListener("dragleave", () => uploadArea.classList.remove("drag-over"));
+  uploadArea.addEventListener("drop", e => {
+    e.preventDefault();
+    uploadArea.classList.remove("drag-over");
+    const file = e.dataTransfer.files[0];
+    if (file) handleFile(file);
+  });
+  $("fileInput").addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (file) handleFile(file);
+  });
+
+  async function handleFile(file) {
+    await ensureXLSX();
+    const buf = await file.arrayBuffer();
+    const wb = window.XLSX.read(buf, { type: "array" });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const raw = window.XLSX.utils.sheet_to_json(ws, { defval: "" });
+
+    // Normalise column names (case-insensitive)
+    function col(row, ...names) {
+      for (const k of Object.keys(row)) {
+        if (names.some(n => k.trim().toLowerCase() === n.toLowerCase())) return row[k];
+      }
+      return "";
+    }
+
+    bulkRows = raw
+      .filter(r => col(r, "Ltr", "Litres", "Volume") !== "" && col(r, "Amount") !== "")
+      .map(r => ({
+        date:    parseDate(col(r, "Date")),
+        time:    randomTime(),
+        ltr:     Number(col(r, "Ltr", "Litres", "Volume")) || 0,
+        amount:  Number(col(r, "Amount")) || 0,
+        rno:     randomReceiptNo(),
+      }));
+
+    if (bulkRows.length === 0) {
+      alert("No valid rows found. Make sure your file has Date, Ltr, and Amount columns.");
+      return;
+    }
+
+    renderPreview();
+  }
+
+  function renderPreview() {
+    const tbody = $("previewBody");
+    tbody.innerHTML = "";
+    bulkRows.forEach((r, i) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${i + 1}</td>
+        <td>${r.date}</td>
+        <td class="time-cell">${r.time}</td>
+        <td>${r.ltr}</td>
+        <td>₹ ${formatAmount(r.amount)}</td>
+        <td class="rno-cell">${r.rno}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+    $("previewCount").textContent = `${bulkRows.length} row${bulkRows.length !== 1 ? "s" : ""} loaded`;
+    $("previewSection").style.display = "";
+    $("uploadArea").style.display = "none";
+  }
+
+  async function bulkDownload() {
+    if (!bulkRows.length) return;
+    await ensureHtmlToImage();
+    await ensureJSZip();
+
+    const btn = $("bulkBtn");
+    btn.disabled = true;
+    const progressWrap = $("progressWrap");
+    const progressBar = $("progressBar");
+    const progressLabel = $("progressLabel");
+    progressWrap.style.display = "block";
+    progressLabel.style.display = "block";
+
+    // Make offscreen element visible for rendering
+    const stage = $("offscreen-stage");
+    stage.style.visibility = "visible";
+
+    const zip = new window.JSZip();
+    const VEHICLE = "MH 02 DZ 2436";
+    const LID = "00324966";
+
+    for (let i = 0; i < bulkRows.length; i++) {
+      const r = bulkRows[i];
+      const rate = r.ltr > 0 ? r.amount / r.ltr : 0;
+
+      $("data-bulk").textContent = buildLines(r.date, r.time, rate, r.ltr, VEHICLE, r.rno, LID);
+
+      // Wait a tick for DOM to update
+      await new Promise(res => setTimeout(res, 30));
+
+      const node = $("receipt-bulk");
+      const dataUrl = await window.htmlToImage.toPng(node, { pixelRatio: 2, backgroundColor: "#ffffff" });
+      const base64 = dataUrl.split(",")[1];
+      const fname = `receipt-${String(i + 1).padStart(3, "0")}-${r.rno}-${r.date.replace(/\//g, "-")}.png`;
+      zip.file(fname, base64, { base64: true });
+
+      const pct = Math.round(((i + 1) / bulkRows.length) * 100);
+      progressBar.style.width = pct + "%";
+      progressLabel.textContent = `${i + 1} / ${bulkRows.length}`;
+    }
+
+    stage.style.visibility = "hidden";
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `mesco-receipts-${bulkRows.length}.zip`;
+    a.click();
+
+    btn.disabled = false;
+    progressWrap.style.display = "none";
+    progressLabel.style.display = "none";
+    progressBar.style.width = "0%";
+  }
+</script>
+</body>
+</html>

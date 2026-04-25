@@ -1,0 +1,187 @@
+/* ──────────────────────────────────────────────────────────────────
+   Petrol Receipt Design System — Colors & Type
+   Source: Petrol.fig (Group-1000002322..2326)
+   ────────────────────────────────────────────────────────────────── */
+
+/* Webfont substitutions
+   The Figma source uses DejaVu Sans Mono + Inria Sans + MonteCarlo (handful).
+   DejaVu Sans Mono is loaded via CDN; Inria Sans is on Google Fonts.
+   Replace with locally-hosted .ttf in fonts/ for offline / print-perfect work. */
+@import url("https://fonts.googleapis.com/css2?family=Inria+Sans:wght@300;400;700&family=Inter:wght@400;500&family=Montecarlo&display=swap");
+
+@font-face {
+  font-family: "DejaVu Sans Mono";
+  src: url("fonts/DejaVuSansMono.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DejaVu Sans Mono";
+  src: url("fonts/DejaVuSansMono-Oblique.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DejaVu Sans Mono";
+  src: url("fonts/DejaVuSansMono-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DejaVu Sans Mono";
+  src: url("fonts/DejaVuSansMono-BoldOblique.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+:root {
+  /* ─── Color foundations ─────────────────────────────────────────── */
+  /* Receipts are black on white. Spot colors come from the wider Figma
+     and should be reserved for editorial/marketing — NOT receipts. */
+
+  --paper:        rgb(255, 255, 255);  /* receipt body */
+  --paper-warm:   #FBF7EE;             /* aged thermal-paper tint */
+  --ink:          rgb(0, 0, 0);        /* all printed glyphs */
+  --ink-soft:     rgba(0, 0, 0, 0.78); /* faded thermal print */
+  --ink-faint:    rgba(0, 0, 0, 0.42); /* very faded print */
+
+  /* Spot colors (NOT for receipts; use for editorial only) */
+  --spot-red:     rgb(243, 46, 46);
+  --spot-orange:  rgb(255, 126, 7);
+  --spot-yellow:  rgb(243, 221, 21);
+  --spot-blue:    rgb(7, 61, 250);
+  --spot-magenta: rgb(205, 3, 255);
+  --spot-grape:   rgb(94, 85, 97);
+  --spot-sky:     rgb(105, 190, 247);
+  --neutral-300:  rgb(217, 217, 217);
+  --neutral-400:  rgb(185, 187, 184);
+
+  /* Surfaces for staging the receipt */
+  --bg-cloth:     #1f1d1a;
+  --bg-cream:     #efe8d8;
+  --bg-tabletop:  #6b5a3e;
+
+  /* Shadow for floated paper */
+  --shadow-paper: 0 8px 24px rgba(0, 0, 0, 0.18),
+                  0 1px 2px rgba(0, 0, 0, 0.10);
+
+  /* ─── Type foundations ──────────────────────────────────────────── */
+  --font-mono:    "DejaVu Sans Mono", "Courier New", ui-monospace, monospace;
+  --font-sans:    "Inria Sans", "Inter", system-ui, sans-serif;
+  --font-script:  "MonteCarlo", "Brush Script MT", cursive;
+  --font-display: "Inter", system-ui, sans-serif;
+
+  /* Tight printer line-height — non-negotiable */
+  --leading-tight: 1.0;
+  --leading-snug:  1.15;
+  --leading-body:  1.4;
+
+  --fs-data:    14px;   /* every receipt body line */
+  --fs-display: 24px;   /* "Welcomes You" */
+  --fs-station: 15px;   /* "MESCO PETROLEUM" station block */
+  --fs-marker:  11px;   /* tiny printer markers */
+  --fs-card-h:  18px;   /* Inter Medium tags used elsewhere in figma */
+
+  /* Layout dimensions of the receipt frame */
+  --receipt-w:  310px;
+  --receipt-pad-x: 27px;
+  --receipt-gutter-x: 30px;
+
+  /* Tear-edge sawtooth size */
+  --tear-tooth: 8px;
+}
+
+/* ─── Semantic styles ────────────────────────────────────────────── */
+
+.receipt-paper {
+  background: var(--paper);
+  color: var(--ink);
+  width: var(--receipt-w);
+  font-family: var(--font-mono);
+  font-size: var(--fs-data);
+  line-height: var(--leading-tight);
+}
+
+.receipt-thank,
+.receipt-line,
+.receipt-data {
+  font-family: var(--font-mono);
+  font-size: var(--fs-data);
+  line-height: var(--leading-tight);
+  color: var(--ink);
+  white-space: pre;       /* preserves alignment spaces */
+}
+
+.receipt-welcome {
+  font-family: var(--font-mono);
+  font-size: var(--fs-display);
+  line-height: var(--leading-tight);
+  color: var(--ink);
+  text-align: center;
+}
+
+.receipt-station {
+  font-family: var(--font-sans);
+  font-size: var(--fs-station);
+  line-height: var(--leading-tight);
+  color: var(--ink);
+  white-space: pre-line;
+}
+
+/* Headings used in editorial / marketing contexts (NOT on receipts) */
+h1, .h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 60px;
+  line-height: 1.05;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+h2, .h2 {
+  font-family: var(--font-script);
+  font-weight: 400;
+  font-size: 50px;
+  line-height: 1.0;
+  color: var(--ink);
+}
+h3, .h3 {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 24px;
+  line-height: 1.15;
+  color: var(--ink);
+}
+p, .p {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+code, .code, .mono {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.0;
+  white-space: pre;
+}
+
+/* Optional: thermal-paper grain. Keep subtle. */
+.paper-grain {
+  background-image:
+    radial-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
+    radial-gradient(rgba(0,0,0,0.018) 1px, transparent 1px);
+  background-size: 3px 3px, 5px 5px;
+  background-position: 0 0, 1px 2px;
+}
+
+/* Tear-edge top/bottom — saw-tooth via conic mask */
+.paper-tear-top {
+  -webkit-mask-image:
+    conic-gradient(from -45deg at 50% 0,
+      #000 0 90deg, transparent 90deg 180deg,
+      #000 180deg 270deg, transparent 270deg 360deg);
+  mask-image: linear-gradient(to bottom, transparent 0, #000 8px, #000 100%);
+}
