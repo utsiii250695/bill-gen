@@ -576,14 +576,24 @@ CHARKOP LINK RD KANDIWALI</div>
     });
   }
 
-  // Bake rotation + drop-shadow onto a canvas; returns a PNG data URL (transparent bg)
+  async function ensureAutoTable() {
+    if (window.jspdf && window.jspdf.jsPDF.API.autoTable) return;
+    await ensureJsPDF();
+    await new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+
+  // Bake subtle rotation + faint drop-shadow onto a canvas (transparent bg)
   function makeScannedCanvas(imgDataUrl, rotDeg) {
     return new Promise(resolve => {
       const img = new Image();
       img.onload = () => {
-        // Generous padding so rotated corners + shadow never clip
         const pad = Math.ceil(Math.sqrt(img.width * img.width + img.height * img.height) / 2)
-                    - Math.floor(Math.min(img.width, img.height) / 2) + 40;
+                    - Math.floor(Math.min(img.width, img.height) / 2) + 20;
         const cw = img.width  + pad * 2;
         const ch = img.height + pad * 2;
         const c = document.createElement("canvas");
@@ -592,10 +602,11 @@ CHARKOP LINK RD KANDIWALI</div>
         ctx.save();
         ctx.translate(cw / 2, ch / 2);
         ctx.rotate(rotDeg * Math.PI / 180);
-        ctx.shadowColor   = "rgba(0,0,0,0.38)";
-        ctx.shadowBlur    = 22;
-        ctx.shadowOffsetX = 7;
-        ctx.shadowOffsetY = 9;
+        // Very subtle shadow — like a receipt resting on a flatbed scanner
+        ctx.shadowColor   = "rgba(0,0,0,0.14)";
+        ctx.shadowBlur    = 7;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 3;
         ctx.drawImage(img, -img.width / 2, -img.height / 2);
         ctx.restore();
         resolve(c.toDataURL("image/png"));
@@ -604,35 +615,106 @@ CHARKOP LINK RD KANDIWALI</div>
     });
   }
 
-  async function buildCombinedPDF(receiptPngs) {
-    await ensureJsPDF();
+  function addSummaryPage(doc, rows, meta) {
+    const pageW = 210;
+    // White background
+    doc.setFillColor(255, 255, 255);
+    doc.rect(0, 0, pageW, 297, "F");
+
+    let y = 18;
+
+    // Employee header
+    if (meta.headerText) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.text(meta.headerText, pageW / 2, y, { align: "center" });
+      y += 10;
+    }
+
+    // Claim title
+    if (meta.titleText) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.text(meta.titleText, pageW / 2, y, { align: "center" });
+      y += 10;
+    }
+
+    const total = rows.reduce((s, r) => s + r.amount, 0);
+
+    doc.autoTable({
+      startY: y,
+      margin: { left: 14, right: 14 },
+      head: [["S.No.", "Date", "Particulars", "Ltr", "Amount"]],
+      body: rows.map((r, i) => [
+        i + 1,
+        r.date.replace(/\//g, "-"),
+        "MESCO Petroleum",
+        r.ltr,
+        formatAmount(r.amount),
+      ]),
+      foot: [["", "", "", "", formatAmount(total)]],
+      headStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        fontStyle: "bold",
+        lineWidth: 0.3,
+        lineColor: [0, 0, 0],
+      },
+      bodyStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        lineWidth: 0.3,
+        lineColor: [0, 0, 0],
+      },
+      footStyles: {
+        fillColor: [255, 255, 255],
+        textColor: [0, 0, 0],
+        fontStyle: "bold",
+        lineWidth: 0.3,
+        lineColor: [0, 0, 0],
+      },
+      columnStyles: {
+        0: { cellWidth: 14, halign: "center" },
+        1: { cellWidth: 32 },
+        2: { cellWidth: "auto" },
+        3: { cellWidth: 16, halign: "right" },
+        4: { cellWidth: 32, halign: "right" },
+      },
+      theme: "plain",
+    });
+  }
+
+  async function buildCombinedPDF(receiptPngs, meta) {
+    await ensureAutoTable();
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
 
+    // Page 1 — summary table
+    addSummaryPage(doc, bulkRows, meta);
+
     const pageW = 210, pageH = 297;
     const margin = 14, gap = 8;
-    const cellW = (pageW - margin * 2 - gap) / 2;   // ~87 mm
-    const cellH = (pageH - margin * 2 - gap) / 2;   // ~130.5 mm
+    const cellW = (pageW - margin * 2 - gap) / 2;
+    const cellH = (pageH - margin * 2 - gap) / 2;
 
     const slots = [
-      [margin,            margin],
+      [margin,               margin],
       [margin + cellW + gap, margin],
-      [margin,            margin + cellH + gap],
+      [margin,               margin + cellH + gap],
       [margin + cellW + gap, margin + cellH + gap],
     ];
 
     for (let i = 0; i < receiptPngs.length; i++) {
-      if (i > 0 && i % 4 === 0) doc.addPage();
       if (i % 4 === 0) {
-        // Warm off-white page background (photocopied paper feel)
-        doc.setFillColor(245, 241, 234);
+        doc.addPage();
+        // Pure white background
+        doc.setFillColor(255, 255, 255);
         doc.rect(0, 0, pageW, pageH, "F");
       }
 
-      const rotDeg = (Math.random() - 0.5) * 16;   // –8 … +8 degrees
+      const rotDeg = (Math.random() - 0.5) * 6;   // –3 … +3 degrees
       const scanned = await makeScannedCanvas(receiptPngs[i], rotDeg);
 
-      // Measure the scanned canvas to preserve aspect ratio inside cell
       const tmpImg = await new Promise(r => {
         const im = new Image(); im.onload = () => r(im); im.src = scanned;
       });
@@ -692,9 +774,11 @@ CHARKOP LINK RD KANDIWALI</div>
   }
 
   let bulkRows = [];
+  let bulkMeta = { headerText: "", titleText: "" };
 
   function clearUpload() {
     bulkRows = [];
+    bulkMeta = { headerText: "", titleText: "" };
     $("previewSection").style.display = "none";
     $("fileInput").value = "";
     $("uploadArea").style.display = "";
@@ -720,9 +804,23 @@ CHARKOP LINK RD KANDIWALI</div>
     const buf = await file.arrayBuffer();
     const wb = window.XLSX.read(buf, { type: "array" });
     const ws = wb.Sheets[wb.SheetNames[0]];
+
+    // Raw rows to extract header/title text from top of sheet
+    const rawRows = window.XLSX.utils.sheet_to_json(ws, { header: 1, defval: "" });
+    bulkMeta = { headerText: "", titleText: "" };
+    for (let i = 0; i < Math.min(6, rawRows.length); i++) {
+      const cells = rawRows[i].map(c => String(c).trim()).filter(Boolean);
+      if (!cells.length) continue;
+      const text = cells[0];
+      // Skip if it looks like a column header row
+      if (/s\.?no|date|ltr|amount|particulars/i.test(text)) continue;
+      if (!bulkMeta.headerText) { bulkMeta.headerText = text; continue; }
+      if (!bulkMeta.titleText)  { bulkMeta.titleText  = text; }
+    }
+
+    // Named-column parse for data rows
     const raw = window.XLSX.utils.sheet_to_json(ws, { defval: "" });
 
-    // Normalise column names (case-insensitive)
     function col(row, ...names) {
       for (const k of Object.keys(row)) {
         if (names.some(n => k.trim().toLowerCase() === n.toLowerCase())) return row[k];
@@ -732,12 +830,17 @@ CHARKOP LINK RD KANDIWALI</div>
 
     bulkRows = raw
       .filter(r => col(r, "Ltr", "Litres", "Volume") !== "" && col(r, "Amount") !== "")
+      .filter(r => {
+        // Skip pure-total rows (no date and no S.No.)
+        const ltr = Number(col(r, "Ltr", "Litres", "Volume"));
+        return ltr > 0;
+      })
       .map(r => ({
-        date:    parseDate(col(r, "Date")),
-        time:    randomTime(),
-        ltr:     Number(col(r, "Ltr", "Litres", "Volume")) || 0,
-        amount:  Number(col(r, "Amount")) || 0,
-        rno:     randomReceiptNo(),
+        date:   parseDate(col(r, "Date")),
+        time:   randomTime(),
+        ltr:    Number(col(r, "Ltr", "Litres", "Volume")) || 0,
+        amount: Number(col(r, "Amount")) || 0,
+        rno:    randomReceiptNo(),
       }));
 
     if (bulkRows.length === 0) {
@@ -815,7 +918,7 @@ CHARKOP LINK RD KANDIWALI</div>
     // Phase 2 — build combined PDF (60 → 90 %)
     progressLabel.textContent = "Building combined PDF…";
     progressBar.style.width = "65%";
-    const pdfBuf = await buildCombinedPDF(allPngs);
+    const pdfBuf = await buildCombinedPDF(allPngs, bulkMeta);
     zip.file("receipts-combined.pdf", pdfBuf);
 
     // Phase 3 — compress & download (90 → 100 %)
