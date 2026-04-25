@@ -592,8 +592,7 @@ CHARKOP LINK RD KANDIWALI</div>
     return new Promise(resolve => {
       const img = new Image();
       img.onload = () => {
-        const pad = Math.ceil(Math.sqrt(img.width * img.width + img.height * img.height) / 2)
-                    - Math.floor(Math.min(img.width, img.height) / 2) + 20;
+        const pad = 28; // tight — only needs to cover ±3° rotation + shadow
         const cw = img.width  + pad * 2;
         const ch = img.height + pad * 2;
         const c = document.createElement("canvas");
@@ -719,8 +718,10 @@ CHARKOP LINK RD KANDIWALI</div>
         const im = new Image(); im.onload = () => r(im); im.src = scanned;
       });
       const aspect = tmpImg.naturalWidth / tmpImg.naturalHeight;
-      let dw = cellW, dh = cellW / aspect;
-      if (dh > cellH) { dh = cellH; dw = cellH * aspect; }
+      // Fill 90% of the cell height; fall back to cell width if too wide
+      let dh = cellH * 0.90;
+      let dw = dh * aspect;
+      if (dw > cellW) { dw = cellW; dh = dw / aspect; }
       const [sx, sy] = slots[i % 4];
       const dx = sx + (cellW - dw) / 2;
       const dy = sy + (cellH - dh) / 2;
