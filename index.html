@@ -587,17 +587,23 @@ CHARKOP LINK RD KANDIWALI</div>
     });
   }
 
-  // Bake subtle rotation + faint drop-shadow onto a canvas (transparent bg)
-  function makeScannedCanvas(imgDataUrl, rotDeg) {
+  // Bake subtle rotation + faint drop-shadow onto a canvas, output as JPEG.
+  // The bounding box is filled white so the opaque JPEG blends into the white
+  // PDF page; corners stay invisible.
+  function makeScannedCanvas(imgDataUrl, rotDeg, quality, scale) {
     return new Promise(resolve => {
       const img = new Image();
       img.onload = () => {
+        const iw = Math.max(1, Math.round(img.width  * scale));
+        const ih = Math.max(1, Math.round(img.height * scale));
         const pad = 28; // tight — only needs to cover ±3° rotation + shadow
-        const cw = img.width  + pad * 2;
-        const ch = img.height + pad * 2;
+        const cw = iw + pad * 2;
+        const ch = ih + pad * 2;
         const c = document.createElement("canvas");
         c.width = cw; c.height = ch;
         const ctx = c.getContext("2d");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, cw, ch);
         ctx.save();
         ctx.translate(cw / 2, ch / 2);
         ctx.rotate(rotDeg * Math.PI / 180);
@@ -606,12 +612,32 @@ CHARKOP LINK RD KANDIWALI</div>
         ctx.shadowBlur    = 7;
         ctx.shadowOffsetX = 2;
         ctx.shadowOffsetY = 3;
-        ctx.drawImage(img, -img.width / 2, -img.height / 2);
+        ctx.drawImage(img, -iw / 2, -ih / 2, iw, ih);
         ctx.restore();
-        resolve(c.toDataURL("image/png"));
+        resolve(c.toDataURL("image/jpeg", quality));
       };
       img.src = imgDataUrl;
     });
+  }
+
+  // Month + full year of the latest (most recent) date in the rows,
+  // e.g. "July 2026". Dates are "DD/MM/YY".
+  function latestMonthYear(rows) {
+    const MONTHS = ["January","February","March","April","May","June",
+                    "July","August","September","October","November","December"];
+    let best = null;
+    for (const r of rows) {
+      const parts = String(r.date).split(/[\/\-]/);
+      if (parts.length < 3) continue;
+      const dd = parseInt(parts[0], 10);
+      const mm = parseInt(parts[1], 10);
+      const yy = parseInt(parts[2], 10);
+      if (!(dd && mm) || isNaN(yy)) continue;
+      const year = yy < 100 ? 2000 + yy : yy;
+      const val = year * 10000 + mm * 100 + dd;
+      if (!best || val > best.val) best = { val, month: mm, year };
+    }
+    return best ? `${MONTHS[best.month - 1]} ${best.year}` : "";
   }
 
   function addSummaryPage(doc, rows, meta) {
@@ -623,20 +649,16 @@ CHARKOP LINK RD KANDIWALI</div>
     let y = 18;
 
     // Employee header
-    if (meta.headerText) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(12);
-      doc.text(meta.headerText, pageW / 2, y, { align: "center" });
-      y += 10;
-    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("Mehul R Shah (30510100)", pageW / 2, y, { align: "center" });
+    y += 10;
 
-    // Claim title
-    if (meta.titleText) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text(meta.titleText, pageW / 2, y, { align: "center" });
-      y += 10;
-    }
+    // Claim title — month/year taken from the latest date in the table
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.text(`Petrol claim for the month of ${latestMonthYear(rows)}`, pageW / 2, y, { align: "center" });
+    y += 10;
 
     const total = rows.reduce((s, r) => s + r.amount, 0);
 
@@ -683,7 +705,7 @@ CHARKOP LINK RD KANDIWALI</div>
     });
   }
 
-  async function buildCombinedPDF(receiptPngs, meta) {
+  async function buildCombinedPDF(receiptPngs, meta, quality, scale) {
     await ensureAutoTable();
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -712,7 +734,7 @@ CHARKOP LINK RD KANDIWALI</div>
       }
 
       const rotDeg = (Math.random() - 0.5) * 6;   // –3 … +3 degrees
-      const scanned = await makeScannedCanvas(receiptPngs[i], rotDeg);
+      const scanned = await makeScannedCanvas(receiptPngs[i], rotDeg, quality, scale);
 
       const tmpImg = await new Promise(r => {
         const im = new Image(); im.onload = () => r(im); im.src = scanned;
@@ -726,7 +748,7 @@ CHARKOP LINK RD KANDIWALI</div>
       const dx = sx + (cellW - dw) / 2;
       const dy = sy + (cellH - dh) / 2;
 
-      doc.addImage(scanned, "PNG", dx, dy, dw, dh);
+      doc.addImage(scanned, "JPEG", dx, dy, dw, dh);
     }
 
     return doc.output("arraybuffer");
@@ -872,6 +894,32 @@ CHARKOP LINK RD KANDIWALI</div>
     $("uploadArea").style.display = "none";
   }
 
+  // Keep the combined PDF (summary table + bills) under 10 MB. Try
+  // progressively lower JPEG quality/scale for the embedded receipts and stop
+  // at the first pass that fits (with a small safety margin).
+  const MAX_PDF_BYTES = 10 * 1024 * 1024;
+  const PDF_BUDGET    = 9.5 * 1024 * 1024;
+  const PDF_ATTEMPTS  = [
+    { q: 0.85, s: 1.0  },
+    { q: 0.72, s: 1.0  },
+    { q: 0.60, s: 0.85 },
+    { q: 0.50, s: 0.70 },
+    { q: 0.42, s: 0.60 },
+    { q: 0.35, s: 0.50 },
+  ];
+
+  // Build the combined PDF, degrading quality only if needed to stay under 10 MB.
+  async function buildCombinedPDFUnderLimit(sourcePngs, meta, onProgress) {
+    let pdfBuf = null;
+    for (let a = 0; a < PDF_ATTEMPTS.length; a++) {
+      const { q, s } = PDF_ATTEMPTS[a];
+      pdfBuf = await buildCombinedPDF(sourcePngs, meta, q, s);
+      if (onProgress) onProgress(a, PDF_ATTEMPTS.length, pdfBuf.byteLength);
+      if (pdfBuf.byteLength <= PDF_BUDGET) break;
+    }
+    return pdfBuf;
+  }
+
   async function bulkDownload() {
     if (!bulkRows.length) return;
     await ensureHtmlToImage();
@@ -916,10 +964,14 @@ CHARKOP LINK RD KANDIWALI</div>
 
     stage.style.visibility = "hidden";
 
-    // Phase 2 — build combined PDF (60 → 90 %)
+    // Phase 2 — build combined PDF, kept under 10 MB (60 → 90 %)
     progressLabel.textContent = "Building combined PDF…";
     progressBar.style.width = "65%";
-    const pdfBuf = await buildCombinedPDF(allPngs, bulkMeta);
+    const pdfBuf = await buildCombinedPDFUnderLimit(allPngs, bulkMeta, (a, total, bytes) => {
+      const mb = (bytes / (1024 * 1024)).toFixed(1);
+      progressLabel.textContent = `Building combined PDF… (${mb} MB)`;
+      progressBar.style.width = (65 + Math.round(((a + 1) / total) * 25)) + "%";
+    });
     zip.file("receipts-combined.pdf", pdfBuf);
 
     // Phase 3 — compress & download (90 → 100 %)
